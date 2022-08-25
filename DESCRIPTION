@@ -1,10 +1,10 @@
 Package: unbiasedgoodness
-Title: What the Package Does (One Line, Title Case)
+Title: Goodness-of-Fit Tests After Model Selection
 Version: 0.0.0.9000
 Authors@R: 
-    person("Joshua", "Loftus", , "J.R.Loftus@lse.ac.uk", role = c("aut", "cre"),
+    person("Joshua", "Loftus", , "joftius@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2905-1632"))
-Description: What the package does (one paragraph).
+Description: Provides post-selection inference methods for goodness-of-fit tests. Typical model diagnostics are biased when computed on the same data used to select the model, but the methods in this package are adjusted to be unbiased.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -12,7 +12,8 @@ RoxygenNote: 7.1.2
 Suggests: 
     knitr,
     rmarkdown,
-    ggplot2
+    ggplot2,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Imports: 
     glmnet,
@@ -20,3 +21,4 @@ Imports:
     selectiveInference
 URL: https://github.com/joftius/unbiasedgoodness
 BugReports: https://github.com/joftius/unbiasedgoodness/issues
+Config/testthat/edition: 3

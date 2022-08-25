@@ -18,6 +18,14 @@ knitr::opts_chunk$set(
 library(unbiasedgoodness)
 ```
 
+Experiments that were not performed are irrelevant
+Models that were not selected?
+https://en.wikipedia.org/wiki/Conditionality_principle
+
+https://en.wikipedia.org/wiki/Hypothetico-deductive_model
+
+
+
 The biggest obstacle for us to say that we have novel theory
 
 cite{MostPowerMS} already defines selective unbiasedness, Lehmann and Scheffe UMPU theory for exponential families
