@@ -1,0 +1,20 @@
+Package: unbiasedgoodness
+Title: What the Package Does (One Line, Title Case)
+Version: 0.0.0.9000
+Authors@R: 
+    person("Joshua", "Loftus", , "J.R.Loftus@lse.ac.uk", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-2905-1632"))
+Description: What the package does (one paragraph).
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Suggests: 
+    knitr,
+    rmarkdown,
+    ggplot2
+VignetteBuilder: knitr
+Imports: 
+    glmnet,
+    RPtests,
+    selectiveInference

@@ -1,0 +1,30 @@
+---
+title: "RP tests"
+output: rmarkdown::html_vignette
+bibliography: bibliography.bib
+link-citations: TRUE
+vignette: >
+  %\VignetteIndexEntry{RP tests}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteDepends{RPtests}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(RPtests)
+library(hdi) # riboflavin dataset
+```
+
+The null hypothesis is that a selected model predicts $y$ well enough, hence the residuals are roughly Gaussian. A variety of different methods can be used to find an alternative model, for example the lasso using a larger prediction matrix, or random forests. Some measure of accuracy is then compared between the selected (null) model and many bootstrap fits of alternative models. The bootstrap allows construction
+
+Can an alternative model selection method predict the residuals (from the selected model) significantly better than it can predict noise?
+
+
+
