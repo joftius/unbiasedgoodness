@@ -18,3 +18,5 @@ Imports:
     glmnet,
     RPtests,
     selectiveInference
+URL: https://github.com/joftius/unbiasedgoodness
+BugReports: https://github.com/joftius/unbiasedgoodness/issues
