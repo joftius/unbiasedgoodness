@@ -8,6 +8,8 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
   %\VignetteDepends{RPtests}
+  %\VignetteDepends{hdi}
+  %\VignetteDepends{unbiasedgoodness}
 ---
 
 ```{r, include = FALSE}
@@ -81,8 +83,54 @@ Exercise: why not just predict normalized residuals $(\mathbf{y} - \mathbf{\hat 
 ```{r setup}
 library(RPtests)
 library(hdi) # riboflavin dataset
+devtools::load_all() # this shouldn't be necessary?
+library(unbiasedgoodness)
 ```
 
 We continue focusing on the high-dimensional linear model and as an alternative to a selected model we consider whether more variables should be included. @shah2018 do not consider selective inference, hence in that paper's simulations it seems there is no model selection involved in choosing the hypotheses. Type 1 error control is shown in simulations set up for the null to be true in all instances, rather than doing model selection and subsetting to instances where the null holds.
+
+
+```{r}
+set.seed(1)
+n <- 100
+p <- 200
+s0 <- 5
+sim_data <- rXb(n, p, s0)
+x <- sim_data$x
+beta <- sim_data$beta
+y <- x %*% beta + rnorm(n)
+```
+
+
+```{r}
+gof_RPtest(x, y)
+```
+
+Iterate
+
+```{r}
+set.seed(1)
+niters <- 5
+n <- 100
+p <- 200
+s0 <- 5
+
+instance <- function(n, p, s0) {
+  sim_data <- rXb(n, p, s0)
+  x <- sim_data$x
+  beta <- sim_data$beta
+  y <- x %*% beta + rnorm(n)
+  gof_fit <- gof_RPtest(x, y)
+  list(
+    null = length(intersect(gof_fit$selected_support, 1:s0)) == s0,
+    alt = length(intersect(union(gof_fit$selected_support, gof_fit$alt_support), 1:s0)) == s0,
+    pval = gof_fit$pval
+    )
+}
+
+output <- replicate(niters, instance(n, p, s0))
+output
+```
+
 
 ## References
