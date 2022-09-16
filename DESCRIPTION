@@ -20,6 +20,7 @@ Imports:
     glmnet,
     RPtests,
     selectiveInference
-URL: https://github.com/joftius/unbiasedgoodness
+URL: https://github.com/joftius/unbiasedgoodness,
+    http://joshualoftus.com/unbiasedgoodness/
 BugReports: https://github.com/joftius/unbiasedgoodness/issues
 Config/testthat/edition: 3

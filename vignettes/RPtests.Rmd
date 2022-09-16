@@ -132,7 +132,7 @@ simulate_gof_instance(m, b = 10, n, p, s0)
 #devtools::load_all() # this shouldn't be necessary?
 library(unbiasedgoodness)
 set.seed(1)
-niters <- 20
+niters <- 500
 output <- simulate_gof(niters, m, b = 10, n, p, s0)
 ```
 
