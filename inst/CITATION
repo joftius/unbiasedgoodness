@@ -2,15 +2,12 @@ citHeader("To cite unbiasedgoodness in publications use:")
 
 citEntry(
   entry    = "Article",
-  title    = ,
-  author   = ,
-  journal  = ,
-  year     = ,
-  volume   = ,
-  number   = ,
-  pages    = ,
-  url      = ,
+  title    = "unbiasedgoodness: Goodness-of-Fit Tests After Model Selection",
+  author   = "Joshua Loftus",
+  journal  = "none",
+  year     = 2022,
+  url      = "https://github.com/joftius/unbiasedgoodness/",
   textVersion = paste(
-
+    "Joshua Loftus. unbiasedgoodness: Goodness-of-Fit Tests After Model Selection."
   )
 )

@@ -116,7 +116,7 @@ gof_RPtest(x, y)
 Iterate
 
 ```{r}
-#devtools::load_all() # this shouldn't be necessary?
+devtools::load_all() # this shouldn't be necessary?
 library(unbiasedgoodness)
 set.seed(1)
 n <- 100
@@ -129,7 +129,7 @@ simulate_gof_instance(m, b = 10, n, p, s0)
 ```
 
 ```{r}
-#devtools::load_all() # this shouldn't be necessary?
+devtools::load_all() # this shouldn't be necessary?
 library(unbiasedgoodness)
 set.seed(1)
 niters <- 20

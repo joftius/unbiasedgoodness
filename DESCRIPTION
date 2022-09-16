@@ -2,7 +2,7 @@ Package: unbiasedgoodness
 Title: Goodness-of-Fit Tests After Model Selection
 Version: 0.0.0.9000
 Authors@R: 
-    person("Joshua", "Loftus", , "joftius@gmail.com", role = c("aut", "cre"),
+    person("Joshua", "Loftus", "R", "joftius@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2905-1632"))
 Description: Provides post-selection inference methods for goodness-of-fit tests. Typical model diagnostics are biased when computed on the same data used to select the model, but the methods in this package are adjusted to be unbiased.
 License: GPL (>= 3)
@@ -12,7 +12,8 @@ RoxygenNote: 7.2.1
 Suggests: 
     knitr,
     rmarkdown,
-    ggplot2,
+    hdi,
+    tidyverse,
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Imports: 
