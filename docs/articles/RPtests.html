@@ -78,9 +78,9 @@
 
     
     
-<div class="section level3">
-<h3 id="philosophy-based-on-cross-validation">Philosophy based on cross-validation<a class="anchor" aria-label="anchor" href="#philosophy-based-on-cross-validation"></a>
-</h3>
+<div class="section level2">
+<h2 id="philosophy-based-on-cross-validation">Philosophy based on cross-validation<a class="anchor" aria-label="anchor" href="#philosophy-based-on-cross-validation"></a>
+</h2>
 <p>In chapter 7 of <span class="citation">Hastie, Tibshirani, and
 Friedman (<a href="#ref-ESL2009" role="doc-biblioref">2009</a>)</span>
 the authors emphasize cross-validation estimates the expected prediction
@@ -132,9 +132,9 @@ paper uses a parametric-residual bootstrap described below, but first we
 consider an important point about the dimension of the first (null)
 model.</p>
 </div>
-<div class="section level3">
-<h3 id="low-vs-high-dimensions">Low vs high-dimensions<a class="anchor" aria-label="anchor" href="#low-vs-high-dimensions"></a>
-</h3>
+<div class="section level2">
+<h2 id="low-vs-high-dimensions">Low vs high-dimensions<a class="anchor" aria-label="anchor" href="#low-vs-high-dimensions"></a>
+</h2>
 <p>In the low dimensional linear model case, the scaled residuals</p>
 <p><span class="math display">\[
 \hat{\mathbf{R}} = \frac{(\mathbf{I} -
@@ -190,9 +190,9 @@ same basic idea of predicting residuals to high-dimensional
 functions, respectively. However, beyond the basic idea there is much
 additional work involved in this other case so we do not consider it
 more here.</p>
-<div class="section level4">
-<h4 id="lasso-details">Lasso details<a class="anchor" aria-label="anchor" href="#lasso-details"></a>
-</h4>
+<div class="section level3">
+<h3 id="lasso-details">Lasso details<a class="anchor" aria-label="anchor" href="#lasso-details"></a>
+</h3>
 <p>To calibrate the test, we need a distribution to compare the accuracy
 measure (typically) achieved by a null model. In the high-dimensional
 case the null model is assumed to be selected by lasso with
@@ -225,10 +225,102 @@ interactions.</p>
 \sigma\)</span> and compare to accuracy in predicting <span class="math inline">\(\mathbf{\zeta}^{(b)}\)</span>? (Consider
 dimensions).</p>
 </div>
-</div>
 <div class="section level3">
-<h3 id="simulations-and-examples">Simulations and examples<a class="anchor" aria-label="anchor" href="#simulations-and-examples"></a>
+<h3 id="rptest-code-explanation">
+<code>RPtest</code> code explanation<a class="anchor" aria-label="anchor" href="#rptest-code-explanation"></a>
 </h3>
+<p>Below we do not consider special cases, for example when a
+user-specified <code>noise_matrix</code> or <code>beta_est</code>
+overrides default behavior. We assume the function is called as
+<code>RPtest(x, y, resid_type, test = "group", x_alt)</code> with no
+other options changed.</p>
+<p><strong>Note</strong>: with <code>test = "group"</code> the
+<code>RPfunction</code> will be set to <code>lasso_test</code>
+regardless of the dimension of the null or alternative.</p>
+<div class="section level4">
+<h4 id="rptest">
+<code>RPtest</code><a class="anchor" aria-label="anchor" href="#rptest"></a>
+</h4>
+<p>When <code>resid_type = "Lasso"</code> (the default unless otherwise
+specified) the following functions will be called.</p>
+<p>First, <code>cv.glmnet</code> is run several times (in parallel) to
+get an estimate <code>beta_est</code>. The estimated signal is
+<code>sig_est &lt;- x %*% beta_est</code>.</p>
+<p>Next, <code>comp_sigma_est</code> is called with this
+<code>beta_est</code> to compute <code>sqrt(MSE)</code>. This is the
+noise level used by <code>rnorm</code>, the default
+<code>rand_gen</code>, to generate noise terms for simulating
+residuals.</p>
+<p>Now simulated residuals <code>resid_sim</code> are computed by
+calling <code>resid_gen_lasso</code> with the above estimates and noise
+terms.</p>
+</div>
+<div class="section level4">
+<h4 id="resid_gen_lasso">
+<code>resid_gen_lasso</code><a class="anchor" aria-label="anchor" href="#resid_gen_lasso"></a>
+</h4>
+<p>In parallel, calls <code>resid_lasso</code> which fits square-root
+lasso and returns residuals. In the implementation of
+<code>sqrt_lasso</code>, if <code>x</code> is not high-dimensional then
+you will see warnings saying
+<code>Smallest lambda chosen by sqrt_lasso</code>.</p>
+<p>If the type is <code>"OLS"</code> then instead of
+<code>sqrt_lasso</code> residuals are computed the ordinary way.</p>
+</div>
+<div class="section level4">
+<h4 id="orthogonalizing-x_alt">Orthogonalizing <code>x_alt</code><a class="anchor" aria-label="anchor" href="#orthogonalizing-x_alt"></a>
+</h4>
+<p>Based on <code>resid_type</code>, this part either uses
+<code>sqrt_lasso</code> or OLS to residualize <code>x_alt</code>,
+subtracting away predictions based on fits to <code>x_null</code>. By
+default <code>x_null = x</code>, the input to <code>RPtest</code>.</p>
+<p><strong>Note</strong>: At this point, if the input <code>x_alt</code>
+is a subset of <code>x</code>, i.e. using the common nested model
+structure of <span class="math inline">\(F\)</span>-tests, this
+residualization will practically project <code>x_alt &lt;- 0</code> in
+the <code>"OLS"</code> case or close to it in the <code>"Lasso"</code>
+case.</p>
+</div>
+<div class="section level4">
+<h4 id="the-default-rpfunction-is-lasso_test-when-test-group">The default <code>RPfunction</code> is <code>lasso_test</code> (when
+<code>test = "group"</code>)<a class="anchor" aria-label="anchor" href="#the-default-rpfunction-is-lasso_test-when-test-group"></a>
+</h4>
+<p>This is applied on both the original and simulated residuals using
+the above orthogonalized <code>x_alt</code>, and will use
+<code>glmnet(x_alt, resid[_sim])</code>. As a test statistic it computes
+the average MSE over the full solution path using the same values of
+<code>lambda</code> as fit to the original residuals.</p>
+</div>
+<div class="section level4">
+<h4 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+</h4>
+<p>After projecting <code>x_alt</code> (approximately, in the Lasso
+case) orthogonal to <code>x</code>, it is used with <code>glmnet</code>
+to predict the original residuals <code>resid</code> and simulated ones
+<code>resid_sim</code>, and the MSE over the solution paths are
+compared. If this <code>x_alt</code> predicts the original residuals
+better than those simulated from the null then it’s evidence there is
+signal in <code>x_alt</code>. To use this as a goodness-of-fit test we
+therefore make <code>x_alt</code> include some additional variables
+which were not selected in the original fit.</p>
+</div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="strategy-for-goodness-of-fit-test">Strategy for goodness-of-fit test<a class="anchor" aria-label="anchor" href="#strategy-for-goodness-of-fit-test"></a>
+</h2>
+<p>The original model selection algorithm chooses some number of
+variables, let’s call this <code>s0</code>. To test for the presence of
+signal variables that were not included in this original fit, we choose
+a larger sparsity level <code>m * s0 + b</code> with
+<code>m &gt;= 1</code> and <code>b &gt; 0</code>. We use the model
+selection algorithm to include more variables up to this level of
+sparsity, and we test the significance of these new additional variables
+as a way of checking the fit of the original, smaller model.</p>
+</div>
+<div class="section level2">
+<h2 id="simulations-and-examples">Simulations and examples<a class="anchor" aria-label="anchor" href="#simulations-and-examples"></a>
+</h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rss.onlinelibrary.wiley.com/doi/10.1111/rssb.12234" class="external-link">RPtests</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">hdi</span><span class="op">)</span> <span class="co"># riboflavin dataset</span></span>
@@ -255,7 +347,12 @@ trying to do selective inference in their simulations it seems there is
 no model selection involved in choosing the hypotheses. Type 1 error
 control is shown in simulations set up for the null to be true in all
 instances, rather than doing model selection and subsetting to instances
-where the null holds (as in selective inference).</p>
+where the null holds (as in selective inference). In contrast to their
+simulations, we are interested in the selective (conditional) error
+control rates, as we explore in the simulations below.</p>
+<div class="section level3">
+<h3 id="one-data-generation-example">One data generation example<a class="anchor" aria-label="anchor" href="#one-data-generation-example"></a>
+</h3>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">100</span></span>
@@ -277,121 +374,132 @@ where the null holds (as in selective inference).</p>
 <span><span class="co">#&gt; $alt_support</span></span>
 <span><span class="co">#&gt; [1]   3   4  85 133 166 190</span></span>
 <span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $pval_full</span></span>
+<span><span class="co">#&gt; [1] 0.02</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $pval_full_lasso</span></span>
+<span><span class="co">#&gt; [1] 0.04</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $pval_lasso</span></span>
 <span><span class="co">#&gt; [1] 0.02</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $pval_OLS</span></span>
 <span><span class="co">#&gt; [1] 0.02</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $pval_full</span></span>
-<span><span class="co">#&gt; [1] 0.02</span></span></code></pre></div>
-<p>Iterate</p>
+<span><span class="co">#&gt; $pval_OLS_beta</span></span>
+<span><span class="co">#&gt; [1] 0.02</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $pval_lasso_rev</span></span>
+<span><span class="co">#&gt; [1] 0.82</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $pval_OLS_rev</span></span>
+<span><span class="co">#&gt; [1] 1</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="iterate-many-times">Iterate many times<a class="anchor" aria-label="anchor" href="#iterate-many-times"></a>
+</h3>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">#devtools::load_all() # this shouldn't be necessary?</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/joftius/unbiasedgoodness" class="external-link">unbiasedgoodness</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co">#devtools::load_all() </span></span>
+<span><span class="co">#library(unbiasedgoodness)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">100</span></span>
 <span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fl">200</span></span>
 <span><span class="va">s0</span> <span class="op">&lt;-</span> <span class="fl">5</span></span>
 <span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fl">1.2</span></span>
-<span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fl">5</span></span>
+<span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fl">10</span></span>
 <span></span>
-<span><span class="fu">simulate_gof_instance</span><span class="op">(</span><span class="va">m</span>, b <span class="op">=</span> <span class="fl">10</span>, <span class="va">n</span>, <span class="va">p</span>, <span class="va">s0</span><span class="op">)</span></span>
+<span><span class="fu">simulate_gof_instance</span><span class="op">(</span><span class="va">m</span>, <span class="va">b</span>, <span class="va">n</span>, <span class="va">p</span>, <span class="va">s0</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    max_corr   min_beta s_null s_alt null_intersection alt_intersection  null</span></span>
 <span><span class="co">#&gt; 1 0.5636253 0.03821633      4     6                 4                4 FALSE</span></span>
-<span><span class="co">#&gt;     alt pval_lasso pval_OLS pval_full</span></span>
-<span><span class="co">#&gt; 1 FALSE       0.04     0.04      0.52</span></span></code></pre></div>
+<span><span class="co">#&gt;     alt pval_lasso pval_OLS pval_lasso_rev pval_OLS_rev pval_full</span></span>
+<span><span class="co">#&gt; 1 FALSE       0.02     0.04           0.24          0.7      0.52</span></span>
+<span><span class="co">#&gt;   pval_full_lasso pval_OLS_beta</span></span>
+<span><span class="co">#&gt; 1            0.56          0.06</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">#devtools::load_all() # this shouldn't be necessary?</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/joftius/unbiasedgoodness" class="external-link">unbiasedgoodness</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co">#devtools::load_all() </span></span>
+<span><span class="co">#library(unbiasedgoodness)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">niters</span> <span class="op">&lt;-</span> <span class="fl">500</span></span>
-<span><span class="va">output</span> <span class="op">&lt;-</span> <span class="fu">simulate_gof</span><span class="op">(</span><span class="va">niters</span>, <span class="va">m</span>, b <span class="op">=</span> <span class="fl">10</span>, <span class="va">n</span>, <span class="va">p</span>, <span class="va">s0</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in gof_RPtest(x, y): Sparsity of 1 chosen by cv.glmnet, forcing to 2 for RPtest compatibility</span></span>
+<span><span class="va">niters</span> <span class="op">&lt;-</span> <span class="fl">200</span></span>
+<span><span class="va">sim_results_file</span> <span class="op">&lt;-</span> <span class="st">"./data/glmnet_RPtest.csv"</span></span>
 <span></span>
-<span><span class="co">#&gt; Warning in gof_RPtest(x, y): Sparsity of 1 chosen by cv.glmnet, forcing to 2 for RPtest compatibility</span></span></code></pre></div>
+<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">sim_results_file</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="st">"Loading saved simulation results"</span><span class="op">)</span></span>
+<span>  <span class="va">output</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="va">sim_results_file</span><span class="op">)</span></span>
+<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>  <span class="co"># run simulation</span></span>
+<span>  <span class="va">output</span> <span class="op">&lt;-</span> <span class="fu">simulate_gof</span><span class="op">(</span><span class="va">niters</span>, <span class="va">m</span>, <span class="va">b</span>, <span class="va">n</span>, <span class="va">p</span>, <span class="va">s0</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv</a></span><span class="op">(</span><span class="va">output</span>, <span class="va">sim_results_file</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="co">#&gt; [1] "Loading saved simulation results"</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="distributions-of-p-values">Distributions of <span class="math inline">\(p\)</span>-values<a class="anchor" aria-label="anchor" href="#distributions-of-p-values"></a>
+</h3>
+<p><img src="RPtests_files/figure-html/unnamed-chunk-6-1.png" width="700"><img src="RPtests_files/figure-html/unnamed-chunk-6-2.png" width="700"><img src="RPtests_files/figure-html/unnamed-chunk-6-3.png" width="700"><img src="RPtests_files/figure-html/unnamed-chunk-6-4.png" width="700"><img src="RPtests_files/figure-html/unnamed-chunk-6-5.png" width="700"><img src="RPtests_files/figure-html/unnamed-chunk-6-6.png" width="700"><img src="RPtests_files/figure-html/unnamed-chunk-6-7.png" width="700"></p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="model-selection-success-rates">Model selection success rates<a class="anchor" aria-label="anchor" href="#model-selection-success-rates"></a>
+</h2>
+<p>These diagnostics are computed to give some indication of the
+difficulty level of lasso model selection for the chosen data generation
+process.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">output</span> <span class="op">|&gt;</span> </span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarize</a></span><span class="op">(</span>null <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">null</span><span class="op">)</span>,</span>
 <span>            alt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">alt</span><span class="op">)</span>,</span>
 <span>            s_null <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">s_null</span><span class="op">)</span>,</span>
 <span>            s_alt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">s_alt</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    null   alt s_null s_alt</span></span>
-<span><span class="co">#&gt; 1 0.452 0.548  8.756 7.774</span></span></code></pre></div>
+<span><span class="co">#&gt;   null  alt s_null s_alt</span></span>
+<span><span class="co">#&gt; 1 0.48 0.56  8.505  7.73</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">output</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">pval_OLS</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_histogram.html" class="external-link">geom_histogram</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_grid.html" class="external-link">facet_grid</a></span><span class="op">(</span><span class="op">~</span><span class="va">null</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">output</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">null_intersection</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/qplot.html" class="external-link">qplot</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
 <p><img src="RPtests_files/figure-html/unnamed-chunk-8-1.png" width="700"></p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">output</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">pval_full</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_histogram.html" class="external-link">geom_histogram</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_grid.html" class="external-link">facet_grid</a></span><span class="op">(</span><span class="op">~</span><span class="va">null</span><span class="op">)</span></span>
-<span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
-<p><img src="RPtests_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">output</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">pval_lasso</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_histogram.html" class="external-link">geom_histogram</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_grid.html" class="external-link">facet_grid</a></span><span class="op">(</span><span class="op">~</span><span class="va">null</span><span class="op">)</span></span>
-<span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
-<p><img src="RPtests_files/figure-html/unnamed-chunk-10-1.png" width="700"></p>
-</div>
-<div class="section level2">
-<h2 id="checking">checking<a class="anchor" aria-label="anchor" href="#checking"></a>
-</h2>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">output</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">null_intersection</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/qplot.html" class="external-link">qplot</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
-<p><img src="RPtests_files/figure-html/unnamed-chunk-12-1.png" width="700"></p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">output</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">alt_intersection</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/qplot.html" class="external-link">qplot</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
-<p><img src="RPtests_files/figure-html/unnamed-chunk-12-2.png" width="700"></p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<p><img src="RPtests_files/figure-html/unnamed-chunk-8-2.png" width="700"></p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">output</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">s_alt</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/qplot.html" class="external-link">qplot</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
-<p><img src="RPtests_files/figure-html/unnamed-chunk-13-1.png" width="700"></p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<p><img src="RPtests_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">output</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">max_corr</span>, <span class="va">null_intersection</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> </span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_smooth.html" class="external-link">geom_smooth</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"lm"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `geom_smooth()` using formula 'y ~ x'</span></span></code></pre></div>
-<p><img src="RPtests_files/figure-html/unnamed-chunk-14-1.png" width="700"></p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<p><img src="RPtests_files/figure-html/unnamed-chunk-10-1.png" width="700"></p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">output</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">min_beta</span>, <span class="va">null_intersection</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> </span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_smooth.html" class="external-link">geom_smooth</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"lm"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `geom_smooth()` using formula 'y ~ x'</span></span></code></pre></div>
-<p><img src="RPtests_files/figure-html/unnamed-chunk-15-1.png" width="700"></p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<p><img src="RPtests_files/figure-html/unnamed-chunk-11-1.png" width="700"></p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">output</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/pull.html" class="external-link">pull</a></span><span class="op">(</span><span class="va">null_intersection</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/qplot.html" class="external-link">qplot</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.</span></span></code></pre></div>
-<p><img src="RPtests_files/figure-html/unnamed-chunk-16-1.png" width="700"></p>
-<div class="section level4">
-<h4 id="rptests-controls-selective-error">RPtests controls selective error<a class="anchor" aria-label="anchor" href="#rptests-controls-selective-error"></a>
-</h4>
+<p><img src="RPtests_files/figure-html/unnamed-chunk-12-1.png" width="700"></p>
+<div class="section level3">
+<h3 id="rptests-controls-selective-error">RPtests controls selective error<a class="anchor" aria-label="anchor" href="#rptests-controls-selective-error"></a>
+</h3>
 <p>To the best of my knowledge it is not known whether
 <strong>RPtests</strong> is valid for <strong>selective
 inference</strong> since it was not designed or proven to do so. This
 empirical demonstration may be a novel result showing that, at least in
 the conditions simulated here, the method does control selective
 errors.</p>
-<div class="section level5">
-<h5 id="selective-type-1-error">Selective type 1 error<a class="anchor" aria-label="anchor" href="#selective-type-1-error"></a>
-</h5>
+<div class="section level4">
+<h4 id="selective-type-1-error">Selective type 1 error<a class="anchor" aria-label="anchor" href="#selective-type-1-error"></a>
+</h4>
 </div>
-<div class="section level5">
-<h5 id="selective-unbiasedness-and-power">Selective unbiasedness and power<a class="anchor" aria-label="anchor" href="#selective-unbiasedness-and-power"></a>
-</h5>
+<div class="section level4">
+<h4 id="selective-unbiasedness-and-power">Selective unbiasedness and power<a class="anchor" aria-label="anchor" href="#selective-unbiasedness-and-power"></a>
+</h4>
 </div>
 </div>
-<div class="section level3">
-<h3 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
-</h3>
+</div>
+<div class="section level2 unnumbered">
+<h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
 <div id="refs" class="references csl-bib-body hanging-indent">
 <div id="ref-belloni2011" class="csl-entry">
 Belloni, A., V. Chernozhukov, and L. Wang. 2011. <span>“Square-Root
@@ -449,7 +557,6 @@ Wasserman, Larry, and Kathryn Roeder. 2009.
 <span>“High-<span>Dimensional</span> <span>Variable</span>
 <span>Selection</span>.”</span> <em>The Annals of Statistics</em> 37
 (5A): 2178–2201. <a href="https://www.jstor.org/stable/30243702" class="external-link">https://www.jstor.org/stable/30243702</a>.
-</div>
 </div>
 </div>
 </div>
