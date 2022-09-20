@@ -114,6 +114,10 @@ simulate_gof_instance <- function(
     alt = alt_intersection == s0,
     pval_lasso = gof_fit$pval_lasso,
     pval_OLS = gof_fit$pval_OLS,
-    pval_full = gof_fit$pval_full
+    pval_lasso_rev = gof_fit$pval_lasso_rev,
+    pval_OLS_rev = gof_fit$pval_OLS_rev,
+    pval_full = gof_fit$pval_full,
+    pval_full_lasso = gof_fit$pval_full_lasso,
+    pval_OLS_beta = gof_fit$pval_OLS_beta
   )
 }

@@ -81,6 +81,46 @@ Note that the sqrt-lasso method can be replaced with other fitting procedures if
 
 Exercise: why not just predict normalized residuals $(\mathbf{y} - \mathbf{\hat y})/\hat \sigma$ and compare to accuracy in predicting $\mathbf{\zeta}^{(b)}$? (Consider dimensions).
 
+### `RPtest` code explanation
+
+Below we do not consider special cases, for example when a user-specified `noise_matrix` or `beta_est` overrides default behavior. We assume the function is called as `RPtest(x, y, resid_type, test = "group", x_alt)` with no other options changed.
+
+**Note**: with `test = "group"` the `RPfunction` will be set to `lasso_test` regardless of the dimension of the null or alternative.
+
+#### `RPtest`
+
+When `resid_type = "Lasso"` (the default unless otherwise specified) the following functions will be called.
+
+First, `cv.glmnet` is run several times (in parallel) to get an estimate `beta_est`. The estimated signal is `sig_est <- x %*% beta_est`. 
+
+Next, `comp_sigma_est` is called with this `beta_est` to compute `sqrt(MSE)`. This is the noise level used by `rnorm`, the default `rand_gen`, to generate noise terms for simulating residuals.
+
+Now simulated residuals `resid_sim` are computed by calling `resid_gen_lasso` with the above estimates and noise terms.
+
+#### `resid_gen_lasso`
+
+In parallel, calls `resid_lasso` which fits square-root lasso and returns residuals. In the implementation of `sqrt_lasso`, if `x` is not high-dimensional then you will see warnings saying `Smallest lambda chosen by sqrt_lasso`. 
+
+If the type is `"OLS"` then instead of `sqrt_lasso` residuals are computed the ordinary way. 
+
+#### Orthogonalizing `x_alt`
+
+Based on `resid_type`, this part either uses `sqrt_lasso` or OLS to residualize `x_alt`, subtracting away predictions based on fits to `x_null`. By default `x_null = x`, the input to `RPtest`.
+
+**Note**: At this point, if the input `x_alt` is a subset of `x`, i.e. using the common nested model structure of $F$-tests, this residualization will practically project `x_alt <- 0` in the `"OLS"` case or close to it in the `"Lasso"` case.
+
+#### The default `RPfunction` is `lasso_test` (when `test = "group"`)
+
+This is applied on both the original and simulated residuals using the above orthogonalized `x_alt`, and will use `glmnet(x_alt, resid[_sim])`. As a test statistic it computes the average MSE over the full solution path using the same values of `lambda` as fit to the original residuals.
+
+#### Summary
+
+After projecting `x_alt` (approximately, in the Lasso case) orthogonal to `x`, it is used with `glmnet` to predict the original residuals `resid` and simulated ones `resid_sim`, and the MSE over the solution paths are compared. If this `x_alt` predicts the original residuals better than those simulated from the null then it's evidence there is signal in `x_alt`. To use this as a goodness-of-fit test we therefore make `x_alt` include some additional variables which were not selected in the original fit.
+
+## Strategy for goodness-of-fit test
+
+The original model selection algorithm chooses some number of variables, let's call this `s0`. To test for the presence of signal variables that were not included in this original fit, we choose a larger sparsity level `m * s0 + b` with `m >= 1` and `b > 0`. We use the model selection algorithm to include more variables up to this level of sparsity, and we test the significance of these new additional variables as a way of checking the fit of the original, smaller model.
+
 ## Simulations and examples
 
 ```{r setup}
@@ -92,8 +132,9 @@ devtools::load_all() # this shouldn't be necessary?
 library(unbiasedgoodness)
 ```
 
-We continue focusing on the high-dimensional linear model and as an alternative to a selected model we consider whether more variables should be included. Since [-@shah2018] are not trying to do selective inference in their simulations it seems there is no model selection involved in choosing the hypotheses. Type 1 error control is shown in simulations set up for the null to be true in all instances, rather than doing model selection and subsetting to instances where the null holds (as in selective inference).
+We continue focusing on the high-dimensional linear model and as an alternative to a selected model we consider whether more variables should be included. Since [-@shah2018] are not trying to do selective inference in their simulations it seems there is no model selection involved in choosing the hypotheses. Type 1 error control is shown in simulations set up for the null to be true in all instances, rather than doing model selection and subsetting to instances where the null holds (as in selective inference). In contrast to their simulations, we are interested in the selective (conditional) error control rates, as we explore in the simulations below.
 
+### One data generation example
 
 ```{r}
 set.seed(1)
@@ -113,28 +154,61 @@ which(beta != 0)
 gof_RPtest(x, y)
 ```
 
-Iterate
+### Iterate many times
 
 ```{r}
-#devtools::load_all() # this shouldn't be necessary?
-library(unbiasedgoodness)
+#devtools::load_all() 
+#library(unbiasedgoodness)
 set.seed(1)
 n <- 100
 p <- 200
 s0 <- 5
 m <- 1.2
-b <- 5
+b <- 10
 
-simulate_gof_instance(m, b = 10, n, p, s0)
+simulate_gof_instance(m, b, n, p, s0)
 ```
 
-```{r}
-#devtools::load_all() # this shouldn't be necessary?
-library(unbiasedgoodness)
+```{r glmnet-RPtest-simulation}
+#devtools::load_all() 
+#library(unbiasedgoodness)
 set.seed(1)
-niters <- 500
-output <- simulate_gof(niters, m, b = 10, n, p, s0)
+niters <- 2
+sim_results_file <- "./data/glmnet_RPtest.csv"
+
+if (file.exists(sim_results_file)) {
+  print("Loading saved simulation results")
+  output <- read.csv(sim_results_file)
+} else {
+  # run simulation
+  output <- simulate_gof(niters, m, b, n, p, s0)
+  write.csv(output, sim_results_file)
+}
 ```
+
+### Distributions of $p$-values
+
+```{r echo=FALSE, message=FALSE, results='hide'}
+output |>
+  pivot_longer(
+    starts_with("pval"),
+    names_to = "type") |>
+  group_by(type) |>
+  group_map(~ ggplot(.) + aes(value) + 
+    xlab("p-value") + 
+    ylab("ecdf") +
+    ggtitle(.y[[1]]) +
+    stat_ecdf() + xlim(0, 1) + ylim(0,1) +
+    geom_abline(slope = 1, linetype = "dashed") +
+    facet_grid(~ null)
+  ) |>
+  print()
+```
+
+
+## Model selection success rates
+
+These diagnostics are computed to give some indication of the difficulty level of lasso model selection for the chosen data generation process.
 
 ```{r}
 output |> 
@@ -142,33 +216,6 @@ output |>
             alt = mean(alt),
             s_null = mean(s_null),
             s_alt = mean(s_alt))
-```
-
-```{r}
-output |>
-  ggplot(aes(pval_OLS)) +
-  geom_histogram() +
-  facet_grid(~null)
-```
-
-```{r}
-output |>
-  ggplot(aes(pval_full)) +
-  geom_histogram() +
-  facet_grid(~null)
-```
-
-```{r}
-output |>
-  ggplot(aes(pval_lasso)) +
-  geom_histogram() +
-  facet_grid(~null)
-```
-
-# checking
-
-```{r}
-library(tidyverse)
 ```
 
 ```{r}

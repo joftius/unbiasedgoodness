@@ -5,8 +5,7 @@
 #'
 #' @details
 #' First uses `cv.glmnet` to select a model with `lambda.1se`, then
-#' tests the selected model against one with a value of `lambda`
-#' chosen to increase the model sparsity.
+#' tests the selected model against one with a larger sparsity.
 #'
 #' @param x A matrix of predictors.
 #' @param y A vector of outcomes.
@@ -40,6 +39,7 @@ gof_RPtest <- function(x, y, m = 1.2, b = 5) {
     sparsity_min <- sum(beta_min != 0) - 1
   }
 
+  # Try to get an alternative model with desired larger sparsity
   larger_sparsity <- ceiling(m * sparsity_min + b)
   larger_lambda_indices <- which(lasso_fit$df >= larger_sparsity)
   if (length(larger_lambda_indices) >= 1) {
@@ -53,8 +53,8 @@ gof_RPtest <- function(x, y, m = 1.2, b = 5) {
       larger_fit_lambda <- lasso_fit$lambda[second_larger_lambda_indices[1]]
       #print(larger_fit_lambda)
     } else {
-      warning("Larger support using m = 1 also failed, using lambda.min/2\n")
-      larger_fit_lambda <- cv_fit$lambda.min / 2
+      warning("Larger support using m = 1 also failed, using lambda.min/10\n")
+      larger_fit_lambda <- cv_fit$lambda.min / 10
     }
     #print(c(cv_fit$lambda.1se, larger_fit_lambda))
   }
@@ -77,6 +77,20 @@ gof_RPtest <- function(x, y, m = 1.2, b = 5) {
                               test = "group",
                               x_alt = x[, -support_min, drop = FALSE])
 
+  pval_full_lasso <- RPtests::RPtest(x[, support_min, drop = FALSE],
+                               y,
+                               resid_type = "Lasso",
+                               test = "group",
+                               x_alt = x[, -support_min, drop = FALSE])
+
+  # pass estimated beta
+  pval_OLS_beta <- RPtests::RPtest(x[, support_min, drop = FALSE],
+                              y,
+                              resid_type = "OLS",
+                              test = "group",
+                              x_alt = x[, support_new, drop = FALSE],
+                              beta_est = beta_min)
+
   pval_OLS <- RPtests::RPtest(x[, support_min, drop = FALSE],
                           y,
                           resid_type = "OLS",
@@ -89,9 +103,28 @@ gof_RPtest <- function(x, y, m = 1.2, b = 5) {
                  test = "group",
                  x_alt = x[, support_new, drop = FALSE])
 
+  # these _rev ones are nested, should probably be removed
+  suppressWarnings(
+  pval_OLS_rev <- RPtests::RPtest(x[, support_larger, drop = FALSE],
+                                  y,
+                                  resid_type = "OLS",
+                                  test = "group",
+                                  x_alt = x[, support_min, drop = FALSE])
+  )
+  suppressWarnings(
+  pval_lasso_rev <- RPtests::RPtest(x[, support_larger, drop = FALSE],
+                                y,
+                                resid_type = "Lasso",
+                                test = "group",
+                                x_alt = x[, support_min, drop = FALSE])
+  )
   list(selected_support = support_min,
        alt_support = support_new,
+       pval_full = pval_full,
+       pval_full_lasso = pval_full_lasso,
        pval_lasso = pval_lasso,
        pval_OLS = pval_OLS,
-       pval_full = pval_full)
+       pval_OLS_beta = pval_OLS_beta,
+       pval_lasso_rev = pval_lasso_rev,
+       pval_OLS_rev = pval_OLS_rev)
 }
