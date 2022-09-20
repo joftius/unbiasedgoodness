@@ -173,7 +173,7 @@ simulate_gof_instance(m, b, n, p, s0)
 #devtools::load_all() 
 #library(unbiasedgoodness)
 set.seed(1)
-niters <- 2
+niters <- 200
 sim_results_file <- "./data/glmnet_RPtest.csv"
 
 if (file.exists(sim_results_file)) {
