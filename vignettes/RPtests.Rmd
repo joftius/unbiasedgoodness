@@ -173,12 +173,14 @@ simulate_gof_instance(m, b, n, p, s0)
 #devtools::load_all() 
 #library(unbiasedgoodness)
 set.seed(1)
-niters <- 200
+niters <- 1000
 sim_results_file <- "./data/glmnet_RPtest.csv"
 
 if (file.exists(sim_results_file)) {
-  print("Loading saved simulation results")
   output <- read.csv(sim_results_file)
+  print(paste0(
+    "Loading saved simulation results with ",
+    nrow(output), " iterates"))
 } else {
   # run simulation
   output <- simulate_gof(niters, m, b, n, p, s0)
@@ -188,7 +190,7 @@ if (file.exists(sim_results_file)) {
 
 ### Distributions of $p$-values
 
-```{r echo=FALSE, message=FALSE, results='hide'}
+```{r glmnet-RPtest-pval-plots, echo=FALSE, message=FALSE, results='hide'}
 output |>
   pivot_longer(
     starts_with("pval"),
@@ -205,6 +207,39 @@ output |>
   print()
 ```
 
+### Selective type 1 error rate
+
+```{r}
+output |>
+  pivot_longer(
+    starts_with("pval"),
+    names_to = "type") |>
+  group_by(type, null) |>
+  summarize(error_rate = mean(value < 0.05), .groups = "keep")
+```
+
+```{r}
+output |>
+  dplyr::filter(null == TRUE) |>
+  pivot_longer(
+    starts_with("pval"),
+    names_to = "type") |>
+  group_by(type) |>
+  summarize(error_rate = mean(value < 0.05), .groups = "keep")
+```
+
+
+### Selective power
+
+```{r}
+output |>
+  dplyr::filter(null == FALSE) |>
+  pivot_longer(
+    starts_with("pval"),
+    names_to = "type") |>
+  group_by(type) |>
+  summarize(power = mean(value < 0.05), .groups = "keep")
+```
 
 ## Model selection success rates
 
