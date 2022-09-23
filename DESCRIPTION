@@ -19,6 +19,7 @@ VignetteBuilder: knitr
 Imports: 
     glmnet,
     RPtests,
+    doParallel,
     selectiveInference
 URL: https://github.com/joftius/unbiasedgoodness,
     http://joshualoftus.com/unbiasedgoodness/
