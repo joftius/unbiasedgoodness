@@ -115,7 +115,7 @@ This is applied on both the original and simulated residuals using the above ort
 
 #### Summary
 
-After projecting `x_alt` (approximately, in the Lasso case) orthogonal to `x`, it is used with `glmnet` to predict the original residuals `resid` and simulated ones `resid_sim`, and the MSE over the solution paths are compared. If this `x_alt` predicts the original residuals better than those simulated from the null then it's evidence there is signal in `x_alt`. To use this as a goodness-of-fit test we therefore make `x_alt` include some additional variables which were not selected in the original fit.
+After projecting `x_alt` (approximately, in the Lasso case) orthogonal to `x`, it is used with `glmnet` to predict the original residuals `resid` and simulated ones `resid_sim`, and the MSE over the solution paths are compared. If this `x_alt` predicts the original residuals better than those simulated from the null then it's evidence there is signal remaining in the (original) residuals. To use this as a goodness-of-fit test we therefore make `x_alt` include some additional variables which were not selected in the original fit.
 
 ## Strategy for goodness-of-fit test
 
@@ -123,16 +123,16 @@ The original model selection algorithm chooses some number of variables, let's c
 
 ## Simulations and examples
 
-```{r setup}
+```{r setup, message=FALSE}
 library(RPtests)
-library(hdi) # riboflavin dataset
+library(hdi) # riboflavin dataset?
 library(purrr)
 library(tidyverse)
 devtools::load_all() # this shouldn't be necessary?
 library(unbiasedgoodness)
 ```
 
-We continue focusing on the high-dimensional linear model and as an alternative to a selected model we consider whether more variables should be included. Since [-@shah2018] are not trying to do selective inference in their simulations it seems there is no model selection involved in choosing the hypotheses. Type 1 error control is shown in simulations set up for the null to be true in all instances, rather than doing model selection and subsetting to instances where the null holds (as in selective inference). In contrast to their simulations, we are interested in the selective (conditional) error control rates, as we explore in the simulations below.
+We continue focusing on the high-dimensional linear model and as an alternative to a selected model we consider whether more variables should be included. Since [-@shah2018] are not trying to do selective inference it seems there is no model selection involved in choosing the hypotheses in their simulations. Type 1 error control is shown in simulations set up for the null to be true in all instances, rather than doing model selection and subsetting to instances where the null holds (as in selective inference). In contrast to their simulations, we are interested in the selective (conditional) error control rates, as we explore in the simulations below.
 
 ### One data generation example
 
@@ -207,10 +207,10 @@ output |>
   print()
 ```
 
-### Selective type 1 error rate
+### Selective error control
 
 ```{r}
-output |>
+rejection_rates <- output |>
   pivot_longer(
     starts_with("pval"),
     names_to = "type") |>
@@ -218,27 +218,19 @@ output |>
   summarize(error_rate = mean(value < 0.05), .groups = "keep")
 ```
 
+#### Selective type 1 error
+
 ```{r}
-output |>
-  dplyr::filter(null == TRUE) |>
-  pivot_longer(
-    starts_with("pval"),
-    names_to = "type") |>
-  group_by(type) |>
-  summarize(error_rate = mean(value < 0.05), .groups = "keep")
+rejection_rates |>
+  dplyr::filter(null == TRUE)
 ```
 
 
 ### Selective power
 
 ```{r}
-output |>
-  dplyr::filter(null == FALSE) |>
-  pivot_longer(
-    starts_with("pval"),
-    names_to = "type") |>
-  group_by(type) |>
-  summarize(power = mean(value < 0.05), .groups = "keep")
+rejection_rates |>
+  dplyr::filter(null == FALSE) 
 ```
 
 ## Model selection success rates
@@ -277,12 +269,9 @@ output %>% pull(null_intersection) |> qplot()
 ```
 
 
-### RPtests controls selective error
+### Does RPtests control selective error?
 
 To the best of my knowledge it is not known whether **RPtests** is valid for **selective inference** since it was not designed or proven to do so. This empirical demonstration may be a novel result showing that, at least in the conditions simulated here, the method does control selective errors.
 
-#### Selective type 1 error
-
-#### Selective unbiasedness and power
 
 ## References

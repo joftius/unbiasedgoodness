@@ -983,3 +983,21 @@ roots_to_partition <- function(roots) {
 }
 
 
+
+checkargs.xy <- function(x, y) {
+  if (missing(x)) stop("x is missing")
+  if (is.null(x) || !is.matrix(x)) stop("x must be a matrix")
+  if (missing(y)) stop("y is missing")
+  if (is.null(y) || !is.numeric(y)) stop("y must be numeric")
+  if (ncol(x) == 0) stop("There must be at least one predictor [must have ncol(x) > 0]")
+  if (checkcols(x)) stop("x cannot have duplicate columns")
+  if (length(y) == 0) stop("There must be at least one data point [must have length(y) > 0]")
+  if (length(y)!=nrow(x)) stop("Dimensions don't match [length(y) != nrow(x)]")
+}
+
+checkcols <- function(A) {
+  b = rnorm(nrow(A))
+  a = sort(t(A)%*%b)
+  if (any(diff(a)==0)) return(TRUE)
+  return(FALSE)
+}

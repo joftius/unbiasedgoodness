@@ -55,7 +55,7 @@ The original model selection algorithm chooses some number of variables, let's c
 
 ## Simulations and examples
 
-```{r setup}
+```{r setup, message=FALSE}
 library(selectiveInference)
 library(hdi) # riboflavin dataset
 library(purrr)
@@ -222,12 +222,5 @@ output %>% pull(null_intersection) |> qplot()
 ```
 
 
-### RPtests controls selective error
-
-To the best of my knowledge it is not known whether **RPtests** is valid for **selective inference** since it was not designed or proven to do so. This empirical demonstration may be a novel result showing that, at least in the conditions simulated here, the method does control selective errors.
-
-#### Selective type 1 error
-
-#### Selective unbiasedness and power
 
 ## References
